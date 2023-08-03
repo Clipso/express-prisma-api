@@ -1,6 +1,8 @@
 import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import { validationResult, body } from 'express-validator';
+
 const app = new express();
-import { PrismaClient } from '@prisma/client'
 const port = 3000
 
 app.use(express.json());
@@ -25,10 +27,18 @@ app.get('/contacts', async (req, res) => {
  * Create a contact
  */
 
-app.post('/contacts', async (req, res) => {
+app.post('/contacts', [
+    body('name').isLength({ min: 1 }).withMessage("Name is required"),
+    body('email').isEmail().withMessage("Email is required"),
+    body('message').isLength({ min: 1 }).withMessage("Message is required"),
+], async (req, res) => {
     console.log("POST a contact");
     console.log(req.body);
     const { name, email, message } = req.body;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array()});
+    }
     // i want to add the contact to the database
     const contact = await prisma.contact.create({
         data: {
@@ -41,6 +51,7 @@ app.post('/contacts', async (req, res) => {
     res.json(contact);
 }
 );
+
 
 /**
  * Find a contact by id
